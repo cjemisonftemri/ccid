@@ -232,3 +232,11 @@ else:
 # COMMAND ----------
 
 # MAGIC %sql SELECT * FROM bronze_alwayson.tu_fusion_dma_match@v2
+
+# COMMAND ----------
+
+# MAGIC %sql select count(*) from silver_alwayson.combined_crosswalk
+
+# COMMAND ----------
+
+# MAGIC %sql select count(*) from silver_alwayson.combined_crosswalk_latest
