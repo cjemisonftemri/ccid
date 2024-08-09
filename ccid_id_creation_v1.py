@@ -31,17 +31,12 @@ drop_tables: bool = False
 backup_path = silver_root + "silver_schema/consumer_canvas/crosswalk_backup/"
 backup_path = backup_path + str(get_version(backup_path))
 
-# crosswalk_df = spark.sql(f""" SELECT * FROM {crosswalk_table_name}""")
-# crosswalk_df.write.parquet(backup_path)
-
-# silver_schema/consumer_canvas/fusion/2024-07-31-13/tu_dma_Match_Final.csv
-# silver_schema/consumer_canvas/fusion/2024-08-01-04/tu_dma_Match_Final.csv
-# silver_schema/consumer_canvas/fusion/2024-08-06-18/tu_dma_Match_Final.csv
-data_set = "2024-08-06-18"
+crosswalk_df = spark.sql(f""" SELECT * FROM {crosswalk_table_name}""")
+crosswalk_df.write.parquet(backup_path)
 
 #### Run ###
-fusion_file_path = (
-    silver_root + f"silver_schema/consumer_canvas/fusion/{data_set}/{fusion_filename}"
+bronze_table_path = (
+    bronze_root + "bronze_schema/consumer_canvas/fusion/fusion_dma_match"
 )
 
 crosswalk_path = silver_root + "silver_schema/consumer_canvas/crosswalk/"
@@ -58,7 +53,19 @@ attributes = [
     "CREATED_DATE",
 ]
 
-fusion_df = spark.read.csv(fusion_file_path, header=True)
+if drop_tables:
+    fusion_df = spark.sql(
+        """
+                        SELECT * FROM bronze_alwayson.fusion_dma_match@v1
+                        """
+    )
+else:
+    fusion_df = spark.sql(
+        """
+                        SELECT * FROM bronze_alwayson.fusion_dma_match@v2
+                        """
+    )
+
 fusion_df = (
     fusion_df.withColumnRenamed("MRIRespID", "MRI_ID")
     .withColumnRenamed("AlwaysOnHHID", "TU_HHID")
@@ -139,7 +146,7 @@ else:
                 & (F.col("a.TU_INDID") == F.col("b.TU_INDID"))
                 & (F.col("a.MRI_ID") == F.col("b.MRI_ID"))
             ),
-            "left_anti"
+            "left_anti",
         )
     )
     updated_records_df.write.mode("append").format("delta").save(crosswalk_path)

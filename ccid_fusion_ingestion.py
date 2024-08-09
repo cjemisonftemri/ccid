@@ -36,4 +36,4 @@ for i, filename in enumerate(files_list):
 
 # COMMAND ----------
 
-# MAGIC %sql select * from bronze_alwayson.fusion_dma_match
+# MAGIC %sql select * from bronze_alwayson.fusion_dma_match@v2
