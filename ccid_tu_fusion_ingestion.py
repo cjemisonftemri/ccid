@@ -18,9 +18,9 @@ files_list = [
 ]
 
 bronze_table_path = (
-    bronze_root + "bronze_schema/consumer_canvas/fusion/fusion_dma_match"
+    bronze_root + "bronze_schema/consumer_canvas/fusion/tu_fusion_dma_match"
 )
-table_name = "bronze_alwayson.fusion_dma_match"
+table_name = "bronze_alwayson.tu_fusion_dma_match"
 
 for i, filename in enumerate(files_list):
     df = spark.read.csv(silver_root + filename, header=True)
@@ -36,4 +36,4 @@ for i, filename in enumerate(files_list):
 
 # COMMAND ----------
 
-# MAGIC %sql select * from bronze_alwayson.fusion_dma_match@v2
+# MAGIC %sql select * from bronze_alwayson.tu_fusion_dma_match@v2
