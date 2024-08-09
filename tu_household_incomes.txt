@@ -1,0 +1,13 @@
+MA4348	Estimated Household Income
+MA4355	Estimated Household Income $100,000 - $124,999
+MA4356	Estimated Household Income $125,000 - $149,999
+MA4357	Estimated Household Income $150,000 - $199,999
+MA4358	Estimated Household Income $200,000 - $249,999
+MA4359	Estimated Household Income $250,000 - $499,999
+MA4350	Estimated Household Income $35,000 - $44,999
+MA4351	Estimated Household Income $45,000 - $54,999
+MA4360	Estimated Household Income $500,000+
+MA4352	Estimated Household Income $55,000 - $69,999
+MA4353	Estimated Household Income $70,000 - $84,999
+MA4354	Estimated Household Income $85,000 - $99,999
+MA4349	Estimated Household Income Less Than $35,000
