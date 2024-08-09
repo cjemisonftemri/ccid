@@ -1,4 +1,5 @@
 # Databricks notebook source
+# DBTITLE 1,Init
 # MAGIC %run /Workspace/Shared/util/storage_account_access 
 
 # COMMAND ----------
@@ -12,6 +13,7 @@ from pyspark.sql.types import *
 import uuid
 import datetime
 from delta.tables import *
+import json
 
 spark.conf.set("spark.databricks.io.cache.enabled", "true")
 spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")
@@ -20,19 +22,12 @@ spark.conf.set("spark.sql.execution.arrow.pyspark.selfDestruct.enabled", "true")
 
 now = datetime.datetime.now()
 date_str = now.strftime("%Y/%m/%d")
-current_quarter = "april2024"
+
 
 # crosswalk_table_name = "silver_alwayson.crosswalk_db23"
 crosswalk_table_name = "silver_alwayson.combined_crosswalk"
 fusion_filename = "tu_dma_Match_Final.csv"
 drop_tables: bool = False
-
-#### BACKUP ####
-backup_path = silver_root + "silver_schema/consumer_canvas/crosswalk_backup/"
-backup_path = backup_path + str(get_version(backup_path))
-
-crosswalk_df = spark.sql(f""" SELECT * FROM {crosswalk_table_name}""")
-crosswalk_df.write.parquet(backup_path)
 
 #### Run ###
 bronze_table_path = (
@@ -51,20 +46,39 @@ attributes = [
     "FinalHhldWgt",
     "VENDOR_QUARTER_CREATED",
     "CREATED_DATE",
+    "META"
 ]
 
 if drop_tables:
     fusion_df = spark.sql(
-        """
-                        SELECT * FROM bronze_alwayson.fusion_dma_match@v1
-                        """
+        """SELECT * FROM bronze_alwayson.fusion_dma_match@v1"""
     )
+    current_quarter = "Q32023"
+    meta = {
+        "MRI_DATASET": "FALLDB23",
+        "TU_DATASET": "Fall 2023",
+        "DMA_MATCH": "bronze_alwayson.fusion_dma_match@v1"
+    }
+    meta = json.dumps(meta)
+
 else:
+    #### BACKUP ####
+    backup_path = silver_root + "silver_schema/consumer_canvas/crosswalk_backup/"
+    backup_path = backup_path + str(get_version(backup_path))
+
+    crosswalk_df = spark.sql(f""" SELECT * FROM {crosswalk_table_name}""")
+    crosswalk_df.write.parquet(backup_path)
+
     fusion_df = spark.sql(
-        """
-                        SELECT * FROM bronze_alwayson.fusion_dma_match@v2
-                        """
+        """SELECT * FROM bronze_alwayson.fusion_dma_match@v2"""
     )
+    current_quarter = "Q22024"
+    meta = {
+        "MRI_DATASET": "FALLDB23",
+        "TU_DATASET": "July 2024",
+        "DMA_MATCH": "bronze_alwayson.fusion_dma_match@v2"
+    }
+    meta = json.dumps(meta)
 
 fusion_df = (
     fusion_df.withColumnRenamed("MRIRespID", "MRI_ID")
@@ -79,8 +93,9 @@ if drop_tables:
 
     crosswalk_df = (
         fusion_df.withColumn("CCID", F.expr("uuid()"))
-        .withColumn("VENDOR_QUARTER_CREATED", F.lit("Q22024"))
+        .withColumn("VENDOR_QUARTER_CREATED", F.lit(current_quarter))
         .withColumn("CREATED_DATE", F.expr("current_timestamp()"))
+        .withColumn("META", F.lit(meta))
         .select(*attributes)
         .cache()
     )
@@ -105,8 +120,9 @@ else:
             "left_anti",
         )
         .withColumn("CCID", F.expr("uuid()"))
-        .withColumn("VENDOR_QUARTER_CREATED", F.lit("Q22024"))
+        .withColumn("VENDOR_QUARTER_CREATED", F.lit(current_quarter))
         .withColumn("CREATED_DATE", F.expr("current_timestamp()"))
+        .withColumn("META", F.lit(meta))
     )
 
     unique_attributes = ["TU_HHID", "TU_INDID"]
@@ -137,8 +153,9 @@ else:
             "a.FinalWgt",
             "a.FinalHhldWgt",
         )
-        .withColumn("VENDOR_QUARTER_CREATED", F.lit("Q22024"))
+        .withColumn("VENDOR_QUARTER_CREATED", F.lit(current_quarter))
         .withColumn("CREATED_DATE", F.expr("current_timestamp()"))
+        .withColumn("META", F.lit(meta))
         .join(
             crosswalk_df.alias("b"),
             (
@@ -153,6 +170,7 @@ else:
 
 # COMMAND ----------
 
+# DBTITLE 1,View Creation
 # MAGIC %sql create or replace view silver_alwayson.combined_crosswalk_latest
 # MAGIC as
 # MAGIC Select a.* from silver_alwayson.combined_crosswalk a
@@ -164,45 +182,53 @@ else:
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC create
+# MAGIC or replace view silver_alwayson.tu_mri_crosswalk_fall23 as
+# MAGIC SELECT
+# MAGIC   a.*
+# MAGIC FROM
+# MAGIC   silver_alwayson.combined_crosswalk a
+# MAGIC where
+# MAGIC   (a.tu_hhid, a.tu_indid) IN (
+# MAGIC     SELECT
+# MAGIC       AlwaysOnHHID,
+# MAGIC       AlwaysOnRecID
+# MAGIC     FROM
+# MAGIC       bronze_alwayson.tu_fusion_dma_match @v1
+# MAGIC   )
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC create
+# MAGIC or replace view silver_alwayson.tu_mri_crosswalk_july24 as
+# MAGIC SELECT a.* FROM silver_alwayson.combined_crosswalk a
+# MAGIC where (a.tu_hhid, a.tu_indid) IN (SELECT TU_HHID
+# MAGIC , TU_INDID
+# MAGIC  FROM bronze_alwayson.tu_fusion_dma_match@v2)
+
+# COMMAND ----------
+
 # MAGIC
 # MAGIC %sql SELECT * FROM silver_alwayson.combined_crosswalk where TU_HHID = '00f4+++oaMOuwwaLXBR1aSSvxg==' 
 # MAGIC and TU_INDID = '00f4ATvSXheG3a1h53qPYyhD8Q=='
 
 # COMMAND ----------
 
-
-fusion_file_path = silver_root + "silver_schema/consumer_canvas/fusion/2024-08-01-04/tu_dma_Match_Final.csv"
-df = spark.read.csv(fusion_file_path, header=True)
-df = (
-    df.withColumnRenamed("MRIRespID", "MRI_ID")
-    .withColumnRenamed("AlwaysOnHHID", "TU_HHID")
-    .withColumnRenamed("AlwaysOnRecID", "TU_INDID")
-    .withColumnRenamed("FIPS_Code", "FIPS_CODE")
-)
-
-df = df.filter(F.col("TU_HHID") == F.lit("00f4+++oaMOuwwaLXBR1aSSvxg=="))\
-  .filter(F.col("TU_INDID") == F.lit("00f4ATvSXheG3a1h53qPYyhD8Q=="))
-
-display(df)
-
-fusion_file_path =  silver_root + "silver_schema/consumer_canvas/fusion/2024-08-06-18/tu_dma_Match_Final.csv"
-df1 = spark.read.csv(fusion_file_path, header=True)
-df1 = (
-    df1.withColumnRenamed("MRIRespID", "MRI_ID")
-    .withColumnRenamed("AlwaysOnHHID", "TU_HHID")
-    .withColumnRenamed("AlwaysOnRecID", "TU_INDID")
-    .withColumnRenamed("FIPS_Code", "FIPS_CODE")
-)
-df1= df1.filter(F.col("TU_HHID") == F.lit("00f4+++oaMOuwwaLXBR1aSSvxg=="))\
-  .filter(F.col("TU_INDID") == F.lit("00f4ATvSXheG3a1h53qPYyhD8Q=="))
-
-display(df1)
-
-# COMMAND ----------
-
-# MAGIC %sql SELECT * FROM silver_alwayson.combined_crosswalk where TU_HHID = '00f4+3NlTf1RfmrOPBO5CrEkQA==' 
-# MAGIC and TU_INDID = '00f4KUXbWPpXLorMPky+xKvA8g=='
-
-# COMMAND ----------
-
 # MAGIC %sql SELECT count(*) FROM silver_alwayson.combined_crosswalk
+
+# COMMAND ----------
+
+# MAGIC %sql SELECT count(*) FROM silver_alwayson.combined_crosswalk_latest
+
+# COMMAND ----------
+
+# MAGIC %sql SELECT a.* FROM silver_alwayson.combined_crosswalk a
+# MAGIC where (a.tu_hhid, a.tu_indid) IN (SELECT TU_HHID
+# MAGIC , TU_INDID
+# MAGIC  FROM bronze_alwayson.tu_fusion_dma_match@v2)
+
+# COMMAND ----------
+
+# MAGIC %sql SELECT * FROM bronze_alwayson.tu_fusion_dma_match@v2
