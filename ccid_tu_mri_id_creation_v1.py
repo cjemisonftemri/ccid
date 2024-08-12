@@ -196,7 +196,7 @@ else:
 # MAGIC       AlwaysOnHHID,
 # MAGIC       AlwaysOnRecID
 # MAGIC     FROM
-# MAGIC       bronze_alwayson.tu_fusion_dma_match @v1
+# MAGIC       silver_alwayson.tu_fusion_dma_match @v1
 # MAGIC   )
 
 # COMMAND ----------
@@ -215,7 +215,7 @@ else:
 # MAGIC       TU_HHID,
 # MAGIC       TU_INDID
 # MAGIC     FROM
-# MAGIC       bronze_alwayson.tu_fusion_dma_match @v2
+# MAGIC       silver_alwayson.tu_fusion_dma_match @v2
 # MAGIC   )
 
 # COMMAND ----------
@@ -234,7 +234,7 @@ else:
 # MAGIC       TU_HHID,
 # MAGIC       TU_INDID
 # MAGIC     FROM
-# MAGIC       bronze_alwayson.tu_fusion_dma_match @v3
+# MAGIC       silver_alwayson.tu_fusion_dma_match @v3
 # MAGIC   )
 
 # COMMAND ----------
