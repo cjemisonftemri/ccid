@@ -22,18 +22,24 @@ bronze_table_path = (
 )
 table_name = "bronze_alwayson.tu_fusion_dma_match"
 
-for i, filename in enumerate(files_list):
-    df = spark.read.csv(silver_root + filename, header=True)
+# for i, filename in enumerate(files_list):
 
-    if i == 0:
-        df.write.format("delta").option("compression", "snappy").option(
-            "path", bronze_table_path
-        ).saveAsTable(table_name)
-    else:
-        df.write.format("delta").mode("overwrite").option(
-            "compression", "snappy"
-        ).option("overwriteSchema", True).save(bronze_table_path)
+filename = "silver_schema/consumer_canvas/fusion/2024-08-11-11/tu_dma_Match_Final.csv"
+
+df = spark.read.csv(silver_root + filename, header=True)
+df.write.format("delta").mode("overwrite").option("compression", "snappy").option(
+    "overwriteSchema", True
+).save(bronze_table_path)
+
+# if True:
+#    df.write.format("delta").option("compression", "snappy").option(
+#        "path", bronze_table_path
+#    ).saveAsTable(table_name)
+# else:
+#    df.write.format("delta").mode("overwrite").option(
+#        "compression", "snappy"
+#    ).option("overwriteSchema", True).save(bronze_table_path)
 
 # COMMAND ----------
 
-# MAGIC %sql select * from bronze_alwayson.tu_fusion_dma_match@v2
+# MAGIC %sql select * from bronze_alwayson.tu_fusion_dma_match@v3
