@@ -145,3 +145,11 @@ else:
 # MAGIC   where a.AIQ_HHID = a1.AIQ_HHID
 # MAGIC   and a.AIQ_INDID = a1.AIQ_INDID
 # MAGIC )
+
+# COMMAND ----------
+
+# MAGIC %sql select * from silver_alwayson.aiq_mri_crosswalk
+
+# COMMAND ----------
+
+# MAGIC %sql select count(*) from silver_alwayson.aiq_mri_crosswalk

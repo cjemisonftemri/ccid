@@ -15,14 +15,18 @@ current_quarter = "july2024"
 
 full_population_table_name = f"bronze_alwayson.tu_full_population_{current_quarter}"
 #full_population_path = transunion_root+"FullPopulation/Attribute"
-full_population_path = transunion_root +"TU_Spring2024_Q32024Refresh_July2024"
+#full_population_path = transunion_root +"TU_Spring2024_Q32024Refresh_July2024"
+full_population_path = sandbox_root + "TU_Fall23_Demo_Race"
 
 full_population_output_path = bronze_root + f"bronze_schema/transunion/full_population/{date_str}"
 full_population_output_path = full_population_output_path + "/" + str(get_version(full_population_output_path))
 
 # COMMAND ----------
 
-df = spark.read.parquet(full_population_path)
+df = spark.read.parquet(sandbox_root + "TU_Fall23_Demo_Race/parquet_file")
+
+
+# COMMAND ----------
 
 spark.sql(f"drop table if exists {full_population_table_name}")
 df.write\

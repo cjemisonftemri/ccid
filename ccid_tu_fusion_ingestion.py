@@ -29,7 +29,7 @@ silver_table_path = (
 silver_table_name = "silver_alwayson.tu_fusion_dma_match"
 
 for i, filename in enumerate(files_list):
-    df = spark.read.csv(silver_root + filename)
+    df = spark.read.csv(silver_root + filename, header=True)
 
     if i == 0:
         spark.sql(f"drop table if exists {silver_table_name}")
